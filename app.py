@@ -1,5 +1,6 @@
 import streamlit as st
+import layout
 
-st.set_page_config(page_title="Layout de Cámaras - Frigosa", layout="wide")
-st.title("❄️ Layout y Posicionamiento de Cámaras")
-st.info("Conexión lista para configurar el mapa visual de racks.")
+# Llama directamente a la función o ejecución del módulo layout
+if hasattr(layout, "render_module"):
+    layout.render_module()
