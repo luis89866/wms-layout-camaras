@@ -57,7 +57,17 @@ ENCABEZADOS_OFICIALES = [
 @st.cache_resource
 def obtener_cliente():
     creds_dict = dict(st.secrets["gcp_service_account"])
-    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    
+    # Normalización de la clave privada para evitar errores RSA
+    if "private_key" in creds_dict:
+        pk = creds_dict["private_key"]
+        if "\\n" in pk:
+            creds_dict["private_key"] = pk.replace("\\n", "\n")
+            
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
     return gspread.authorize(creds)
 
@@ -108,9 +118,14 @@ with st.sidebar:
         st.cache_resource.clear()
         st.rerun()
 
-df_pos = cargar_posiciones_df()
+try:
+    df_pos = cargar_posiciones_df()
+except Exception as e:
+    st.error(f"Error al conectar con Google Sheets: {e}")
+    st.info("Verifica que las credenciales en 'Secrets' contengan el email y la llave de la cuenta de servicio.")
+    st.stop()
 
-# Inicializador de matriz física
+# Auto-generación de matriz base
 if df_pos.empty or len(df_pos) < 100:
     st.warning("⚠️ La hoja `POSICIONES_CAMARAS` aún no tiene las 648 celdas de Cámara 1 y Cámara 2 creadas.")
     if st.button("⚡ Auto-generar Matriz de 648 Celdas en Sheets", type="primary"):
@@ -269,7 +284,6 @@ else:
         with c_rk:
             rk_dest = st.selectbox("Rack Destino:", ["RACK 1", "RACK 2", "RACK 3"], key="rk_dest_sel")
 
-        # Filtrar solo posiciones disponibles de ese rack
         df_libres = df_pos[
             (df_pos["CAMARA"] == cam_dest) &
             (df_pos["RACK"] == rk_dest) &
